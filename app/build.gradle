@@ -1,14 +1,17 @@
 apply plugin: 'com.android.application'
+apply from: "$rootDir/config.gradle"
 
 android {
     compileSdkVersion 26
     buildToolsVersion "26.0.1"
+
     defaultConfig {
-        applicationId "org.ftd.gyn"
-        minSdkVersion 16
-        targetSdkVersion 26
-        versionCode 1
-        versionName "1.0"
+        applicationId appConfig.appId
+        minSdkVersion versions.minSdk
+        targetSdkVersion versions.targetSdk
+        versionCode getVersionCode(true)
+        versionName getVersionName(true)
+
         testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
         externalNativeBuild {
             cmake {
@@ -17,33 +20,84 @@ android {
         }
     }
 
+    lintOptions {
+        abortOnError false
+    }
+
     signingConfigs {
-        release {
-            storeFile file("./signature/as_keystore.jks")
-            storePassword 'Aa123456'
-            keyAlias 'as_keys0'
-            keyPassword 'Aa123456'
+        debug {
+
         }
 
-        debug {
-            storeFile file("./signature/as_keystore.jks")
-            storePassword 'Aa123456'
-            keyAlias 'as_keys0'
-            keyPassword 'Aa123456'
+        release {
+            keyAlias appConfig.keyAlias
+            keyPassword appConfig.keyPassword
+            storeFile file(appConfig.storeFile)
+            storePassword appConfig.storePassword
         }
     }
 
     buildTypes {
         release {
+            buildConfigField 'boolean', 'IS_DEBUG', 'false'
+            debuggable false
+            zipAlignEnabled true
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
             signingConfig signingConfigs.release
         }
 
         debug {
+            applicationIdSuffix '.debug'
+            buildConfigField 'boolean', 'IS_DEBUG', 'true'
+            debuggable true
+            zipAlignEnabled true
+            minifyEnabled false
+            shrinkResources false
             signingConfig signingConfigs.debug
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
     }
+
+    applicationVariants.all {
+        variant ->
+            variant.outputs.each {
+                output ->
+                    if (variant.buildType.name == 'release') {
+                        variant.mergedFlavor.versionCode = getVersionCode(false)
+                        variant.mergedFlavor.versionName = getVersionName(false)
+                        // release
+                        def apkName = "${project.getName()}_${variant.flavorName}_${buildType.name}_v${variant.versionCode}.apk";
+                        output.outputFile = new File(output.outputFile.parent, apkName);
+                    } else {
+                        variant.mergedFlavor.versionCode = getVersionCode(true)
+                        variant.mergedFlavor.versionName = getVersionName(true)
+                        // debug
+                        def apkName = "${project.getName()}_${buildType.name}.apk";
+                        output.outputFile = new File(output.outputFile.parent, apkName);
+                    }
+            }
+    }
+
+    productFlavors {
+        beta {
+            buildConfigField "String", "API_BETA", "\"$appConfig.betaAPI\""
+            applicationId appConfig.appId + ".beta"
+            manifestPlaceholders = [APP_NAME: appConfig.betaName,
+                                    APP_LOGO: appConfig.betaLogo,
+                                    PACKAGE : appConfig.appId
+            ]
+        }
+        production {
+            buildConfigField "String", "API_PRO", "\"$appConfig.proAPI\""
+            applicationId appConfig.appId
+            manifestPlaceholders = [APP_NAME: appConfig.proName,
+                                    APP_LOGO: appConfig.proLogo,
+                                    PACKAGE : appConfig.appId
+            ]
+        }
+    }
+
     externalNativeBuild {
         cmake {
             path "CMakeLists.txt"
@@ -59,4 +113,38 @@ dependencies {
     compile 'com.android.support:appcompat-v7:26.+'
     compile 'com.android.support.constraint:constraint-layout:1.0.2'
     testCompile 'junit:junit:4.12'
+}
+
+// version code
+static def getVersionCode(boolean isDebug) {
+    if (isDebug) {
+        return Integer.parseInt(new Date().format("yyMMddHHmm"))
+    }
+    return getRevisionNumber()
+}
+
+// version name
+def getVersionName(boolean isDebug) {
+    String version = appConfig.appmajor +
+            '.' + appConfig.appminor +
+            '.' + getRevisionNumber()
+    String today = new Date().format('yyMMdd')
+    String time = new Date().format('HHmmss')
+    if (isDebug) {
+        return version + ".$today.$time." + getRevisionDescription()
+    }
+    return version + ".$today." + getRevisionDescription()
+}
+
+// git submissions
+static def getRevisionNumber() {
+    Process process = "git rev-list --count HEAD".execute()
+    process.waitFor()
+    return process.getText().toInteger()
+}
+
+// git last commit 6
+static def getRevisionDescription() {
+    String desc = 'git describe --always'.execute().getText().trim()
+    return (desc == null || desc.size() == 0) ? new Date().format("yyMMdd") : desc.substring(0, 6)
 }

@@ -1,0 +1,22 @@
+ext.versions = [
+    complieSdk   : 26,
+    buildTools   : '26.0.1',
+    minSdk       : 16,
+    targetSdk    : 26,
+]
+
+ext.appConfig = [
+    appmajor     : 1,
+    appminor     : 0,
+    appId        : 'org.ftd.gyn',
+    keyAlias     : 'as_keys0',
+    keyPassword  : 'Aa123456',
+    storeFile    : "$rootDir/signature/as_keystore.jks",
+    storePassword: 'Aa123456',
+    betaAPI      : 'http://beta.labelnet.cn',
+    betaName     : '@string/app_name',
+    betaLogo     : '@mipmap/ic_launcher_round',
+    proAPI       : 'http://pro.labelnet.cn',
+    proName      : '@string/app_name',
+    proLogo      : '@mipmap/ic_launcher',
+]
