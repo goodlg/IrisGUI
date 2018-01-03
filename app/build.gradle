@@ -2,8 +2,8 @@ apply plugin: 'com.android.application'
 apply from: "$rootDir/config.gradle"
 
 android {
-    compileSdkVersion 26
-    buildToolsVersion "26.0.1"
+    compileSdkVersion versions.complieSdk
+    buildToolsVersion versions.buildTools
 
     defaultConfig {
         applicationId appConfig.appId
