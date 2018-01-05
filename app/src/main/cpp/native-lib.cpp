@@ -1,4 +1,4 @@
-#define LOG_TAG "Irisgui"
+#define LOG_TAG "IrisGui"
 #define LOG_NDEBUG 0
 
 #include <jni.h>
@@ -30,9 +30,9 @@
 static void *s_handle = NULL;
 
 typedef int (*CAC_FUNC)();
-#if defined(USE_MY) && (USE_MY == 1)
 typedef int (*CAC_FUNC1)(int);
-#endif
+typedef int (*CAC_FUNC2)(int, int *);
+typedef int (*CAC_FUNC3)(int, int);
 
 /* API */
 #if defined(USE_MY) && (USE_MY == 1)
@@ -44,6 +44,8 @@ CAC_FUNC Open = NULL;
 CAC_FUNC Close = NULL;
 CAC_FUNC StartStream = NULL;
 CAC_FUNC StopStream = NULL;
+CAC_FUNC2 ReadRegister = NULL;
+CAC_FUNC3 WriteRegister = NULL;
 
 extern "C"
 JNIEXPORT jint JNICALL
@@ -51,7 +53,7 @@ Java_org_ftd_gyn_IrisguiActicity_ApiInit(
         JNIEnv *env,
         jobject /* this */) {
     char *error;
-    LOGI("[IR_JNI]: %s", __func__);
+    LOGI("[IR_JNI]: ApiInit");
 
     s_handle = dlopen(IRIS_LIB_PATH, RTLD_NOW);
     if (NULL == s_handle) {
@@ -86,7 +88,7 @@ Java_org_ftd_gyn_IrisguiActicity_ApiInit(
         return FALSE;
     }
 #else
-        *(void **) (&Open) = dlsym(s_handle, "RawCam_Open");
+    *(void **) (&Open) = dlsym(s_handle, "RawCam_Open");
     if ((error = dlerror()) != NULL)  {
         LOGE("[IR_JNI]: Failed to get RawCam_Open handle in %s()! (Reason=%s)\n", __FUNCTION__, error);
         return FALSE;
@@ -109,8 +111,20 @@ Java_org_ftd_gyn_IrisguiActicity_ApiInit(
         LOGE("[IR_JNI]: Failed to get RawCam_StopStream handle in %s()! (Reason=%s)\n", __FUNCTION__, error);
         return FALSE;
     }
+
+    *(void **) (&ReadRegister) = dlsym(s_handle, "RawCam_ReadRegister");
+    if ((error = dlerror()) != NULL)  {
+        LOGE("[IR_JNI]: Failed to get RawCam_ReadRegister handle in %s()! (Reason=%s)\n", __FUNCTION__, error);
+        return FALSE;
+    }
+
+    *(void **) (&WriteRegister) = dlsym(s_handle, "RawCam_WriteRegister");
+    if ((error = dlerror()) != NULL)  {
+        LOGE("[IR_JNI]: Failed to get RawCam_WriteRegister handle in %s()! (Reason=%s)\n", __FUNCTION__, error);
+        return FALSE;
+    }
 #endif
-    LOGI("[IR_JNI]: %s INIT done!!!", __func__);
+    LOGI("[IR_JNI]: INIT done");
     return TRUE;
 }
 
@@ -121,7 +135,7 @@ Java_org_ftd_gyn_IrisguiActicity_ApiDeinit(
         jobject /* this */) {
     if (s_handle != NULL) {
         dlclose(s_handle);
-        LOGI("[IR_JNI]: ApiDeinit done!!!");
+        LOGI("[IR_JNI]: ApiDeinit done");
     }
     return 0;
 }
@@ -132,11 +146,10 @@ Java_org_ftd_gyn_IrisguiActicity_RawCamOpen(
         JNIEnv *env,
         jobject obj,
         jint id) {
-#if defined(USE_MY) && (USE_MY == 1)
     LOGI("[IR_JNI]: RawCamOpen (id %d)", id);
+#if defined(USE_MY) && (USE_MY == 1)
     return Open(id);
 #else
-    LOGI("[IR_JNI]: RawCamOpen");
     return Open();
 #endif
 }
@@ -155,9 +168,9 @@ JNIEXPORT jint JNICALL
 Java_org_ftd_gyn_IrisguiActicity_RawCamStartStream(
         JNIEnv *env,
         jobject /* this */) {
+    LOGI("[IR_JNI]: RawCamStartStream");
 #if defined(USE_MY) && (USE_MY == 1)
 #else
-    LOGI("[IR_JNI]: RawCamStartStream");
     StartStream();
 #endif
     return 0;
@@ -168,10 +181,40 @@ JNIEXPORT jint JNICALL
 Java_org_ftd_gyn_IrisguiActicity_RawCamStopStream(
         JNIEnv *env,
         jobject /* this */) {
+    LOGI("[IR_JNI]: RawCamStopStream");
 #if defined(USE_MY) && (USE_MY == 1)
 #else
-    LOGI("[IR_JNI]: RawCamStopStream");
     StopStream();
+#endif
+    return 0;
+}
+
+extern "C"
+JNIEXPORT jint JNICALL
+Java_org_ftd_gyn_IrisguiActicity_RawCamReadRegister(
+        JNIEnv *env,
+        jobject obj,/* this */
+        jint addr) {
+    int value = 0;
+    LOGI("[IR_JNI]: ReadRegister, addr=%d", addr);
+#if defined(USE_MY) && (USE_MY == 1)
+#else
+    ReadRegister(addr, &value);
+#endif
+    return value;
+}
+
+extern "C"
+JNIEXPORT jint JNICALL
+Java_org_ftd_gyn_IrisguiActicity_RawCamWriteRegister(
+        JNIEnv *env,
+        jobject obj,/* this */
+        jint addr,
+        jint value) {
+    LOGI("[IR_JNI]: WriteRegister, addr=%d, value=%d", addr, value);
+#if defined(USE_MY) && (USE_MY == 1)
+#else
+    WriteRegister(addr, value);
 #endif
     return 0;
 }

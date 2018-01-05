@@ -47,7 +47,7 @@ public class IrisguiActicity extends Activity
         implements TextureView.SurfaceTextureListener, Camera.ErrorCallback,
         Camera.PreviewCallback {
 
-    private static final String TAG = "Irisgui";
+    private static final String TAG = "IrisGui";
 
     // ------------------------------------------------------
     static final private boolean saveSnapshot = false; // true = save snapshot to file
@@ -72,7 +72,7 @@ public class IrisguiActicity extends Activity
     private SurfaceTexture mSurfaceTexture;
     private TextureView mTextureView;
 
-    private static final boolean DEBUG = false;
+    private static final boolean DEBUG = BuildConfig.IS_DEBUG;
 
     private Camera mCamera;
     private Camera.CameraInfo mCameraInfo;
@@ -136,6 +136,8 @@ public class IrisguiActicity extends Activity
     public native int RawCamClose();
     public native int RawCamStartStream();
     public native int RawCamStopStream();
+    public native int RawCamReadRegister(int addr);
+    public native int RawCamWriteRegister(int addr, int value);
 
     // ------------------------------------------------------
     public IrisguiActicity() {
@@ -625,6 +627,7 @@ public class IrisguiActicity extends Activity
     // callback for READ/WRITE button press
     private OnClickListener mRegisterListener = new OnClickListener() {
         public void onClick(View v) {
+            if (USE_JAVA_API)
             if (checkNull(true)) return;
             int mAddr = 0;
             int mValue = 0;
@@ -652,13 +655,23 @@ public class IrisguiActicity extends Activity
 
             //Log.d(TAG, "mAddr:" + mAddr + ", mValue=" + mValue);
 
-            if (v.getId() == R.id.readRegister) {
-                doRegister(mCurrentCameraId, mAddr, 0, 1);
-            } else if (v.getId() == R.id.writeRegister) {
-                if (checkStringNull(value, R.string.register_addr_value)) {
-                    return;
+            if (USE_JAVA_API) {
+                if (v.getId() == R.id.readRegister) {
+                    doRegister(mCurrentCameraId, mAddr, 0, 1);
+                } else if (v.getId() == R.id.writeRegister) {
+                    if (checkStringNull(value, R.string.register_addr_value)) {
+                        return;
+                    }
+                    doRegister(mCurrentCameraId, mAddr, mValue, 0);
                 }
-                doRegister(mCurrentCameraId, mAddr, mValue, 0);
+            } else {
+                if (v.getId() == R.id.readRegister) {
+                    int value1 = RawCamReadRegister(mAddr);
+                    String tmpStr = "0x" + Integer.toHexString(value1);
+                    mEditRegisterValue.setText(tmpStr);
+                } else if (v.getId() == R.id.writeRegister) {
+                    RawCamWriteRegister(mAddr, mValue);
+                }
             }
         }
     };

@@ -26,14 +26,25 @@ android {
 
     signingConfigs {
         debug {
-
+            try {
+                keyAlias appConfig.keyAlias
+                keyPassword appConfig.keyPassword
+                storeFile file(appConfig.asStoreFile)
+                storePassword appConfig.storePassword
+            }catch (ex) {
+                throw new InvalidUserDataException(ex.toString())
+            }
         }
 
         release {
-            keyAlias appConfig.keyAlias
-            keyPassword appConfig.keyPassword
-            storeFile file(appConfig.storeFile)
-            storePassword appConfig.storePassword
+            try {
+                keyAlias appConfig.keyAlias
+                keyPassword appConfig.keyPassword
+                storeFile file(appConfig.sysStoreFile)
+                storePassword appConfig.storePassword
+            }catch (ex) {
+                throw new InvalidUserDataException(ex.toString())
+            }
         }
     }
 
@@ -42,7 +53,7 @@ android {
             buildConfigField 'boolean', 'IS_DEBUG', 'false'
             debuggable false
             zipAlignEnabled true
-            minifyEnabled false
+            minifyEnabled true
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
             signingConfig signingConfigs.release
         }
@@ -67,7 +78,8 @@ android {
                         variant.mergedFlavor.versionCode = getVersionCode(false)
                         variant.mergedFlavor.versionName = getVersionName(false)
                         // release
-                        def apkName = "${project.getName()}_${variant.flavorName}_${buildType.name}_v${variant.versionCode}.apk";
+                        //def apkName = "${project.getName()}_${variant.flavorName}_${buildType.name}_v${variant.versionCode}.apk";
+                        def apkName = "${getApkName(false)}.apk";
                         output.outputFile = new File(output.outputFile.parent, apkName);
                     } else {
                         variant.mergedFlavor.versionCode = getVersionCode(true)
@@ -85,7 +97,8 @@ android {
             applicationId appConfig.appId + ".beta"
             manifestPlaceholders = [APP_NAME: appConfig.betaName,
                                     APP_LOGO: appConfig.betaLogo,
-                                    PACKAGE : appConfig.appId
+                                    PACKAGE : appConfig.appId,
+                                    UID     : appConfig.asUid
             ]
         }
         production {
@@ -93,7 +106,8 @@ android {
             applicationId appConfig.appId
             manifestPlaceholders = [APP_NAME: appConfig.proName,
                                     APP_LOGO: appConfig.proLogo,
-                                    PACKAGE : appConfig.appId
+                                    PACKAGE : appConfig.appId,
+                                    UID     : appConfig.sysUid
             ]
         }
     }
@@ -147,4 +161,18 @@ static def getRevisionNumber() {
 static def getRevisionDescription() {
     String desc = 'git describe --always'.execute().getText().trim()
     return (desc == null || desc.size() == 0) ? new Date().format("yyMMdd") : desc.substring(0, 6)
+}
+
+// apk name
+def getApkName(boolean isDebug) {
+    String version = appConfig.appId +
+            '-' + appConfig.appmajor +
+            '.' + appConfig.appminor +
+            '.' + getRevisionNumber()
+    String today = new Date().format('yyMMdd')
+    String time = new Date().format('HHmmss')
+    if (isDebug) {
+        return version + "-$today-$time." + getRevisionDescription()
+    }
+    return version + "-$today-" + getRevisionDescription()
 }
