@@ -38,6 +38,7 @@ import java.lang.reflect.Method;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.List;
+import com.spectralink.barcode.lib.BarcodeManager;
 
 /**
  * Created by sdduser on 17-12-15.
@@ -78,8 +79,8 @@ public class IrisguiActicity extends Activity
     private Camera.CameraInfo mCameraInfo;
     private Camera.Parameters mParams;
 
-    private int mCurrentCameraId              = -1;
     protected int mDefaultCameraId            = 2;//0: BACK, 1: FRONT, 2: IRIS
+    private int mCurrentCameraId              = mDefaultCameraId;
 
     private final Object mSurfaceTextureLock  = new Object();
 
@@ -132,7 +133,7 @@ public class IrisguiActicity extends Activity
     public native int ApiInit();
     public native int ApiDeinit();
 
-    public native int RawCamOpen();
+    public native int RawCamOpen(int id);
     public native int RawCamClose();
     public native int RawCamStartStream();
     public native int RawCamStopStream();
@@ -524,8 +525,8 @@ public class IrisguiActicity extends Activity
 
             if (USE_JAVA_API) {
                 doOpen();
-            }else {
-                RawCamOpen();
+            } else {
+                RawCamOpen(mCurrentCameraId);
             }
         }
     };
